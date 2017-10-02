@@ -129,6 +129,7 @@ describe SlackGamebot::Commands::Lost, vcr: { cassette_name: 'user_info' } do
     end
   end
   context 'lost to' do
+    let(:captain) { Fabricate(:user, captain: true) }
     let(:loser) { Fabricate(:user, user_name: 'username') }
     let(:winner) { Fabricate(:user) }
     it 'a player' do
@@ -150,6 +151,20 @@ describe SlackGamebot::Commands::Lost, vcr: { cassette_name: 'user_info' } do
             'You cannot lose to yourself!'
           )
         end.to_not change(Challenge, :count)
+      end.to_not change(Match, :count)
+    end
+    it 'captain specified match' do
+      expect do
+        expect(message: "#{SlackRubyBot.config.user} #{loser.user_name} lost to #{winner.user_name}", user: captain.user_id, channel: 'channel').to respond_with_slack_message(
+          "Match has been recorded! #{winner.user_name} defeated #{loser.user_name}."
+        )
+      end.to change(Match, :count).by(1)
+    end
+    it 'non-captain specified match' do
+      expect do
+        expect(message: "#{SlackRubyBot.config.user} #{loser.user_name} lost to #{winner.user_name}", user: captain.user_id, channel: 'channel').to respond_with_slack_message(
+          "You are not a captain!"
+        )
       end.to_not change(Match, :count)
     end
     it 'two players' do
